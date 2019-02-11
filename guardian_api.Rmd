@@ -1,0 +1,50 @@
+---
+title: "guardian_api"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# API
+
+Searching
+
+```{r}
+# https://open-platform.theguardian.com/documentation/
+# https://open-platform.theguardian.com/documentation/search
+library(httr)
+library(magrittr)
+library(kableExtra)
+library(purrr)
+library(tidyverse)
+# https://db.rstudio.com/best-practices/managing-credentials/
+guardian_api_key <- Sys.getenv("guardian_api_key")
+search <- "hmcts"
+page_size <- 50
+from_date <- "2010-01-01"
+
+guardian_url <- paste0("https://content.guardianapis.com/search?q=",search,
+                       "&page-size=",page_size,
+                       "&from-date=",from_date,
+                       "&order-by=newest",
+                       "&show-fields=body",
+                       "&api-key=",guardian_api_key)
+
+guardian_GET <- httr::GET(url = guardian_url)
+
+# Check response type (json or xml?)
+httr::http_type(guardian_GET)
+
+# Extract text from GET with content()
+guardian_content <- httr::content(guardian_GET, as = "text")
+
+# Parse returned text with fromJSON()
+# https://cran.r-project.org/web/packages/jsonlite/vignettes/json-aaquickstart.html
+guardian_json <- jsonlite::fromJSON(guardian_content)
+
+guardian_df <- base::as.data.frame(guardian_json$response$results %>%
+                                     purrr::map(~.x) )
+write.csv(guardian_df,"guardian_df.csv")
+```
